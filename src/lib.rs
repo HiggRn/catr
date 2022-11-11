@@ -1,4 +1,4 @@
-use clap::{App, Arg};
+use clap::{arg, command};
 use std::char;
 use std::error::Error;
 use std::fs::File;
@@ -85,114 +85,50 @@ pub fn run(config: Config) -> RunResult<()> {
 }
 
 pub fn get_args() -> RunResult<Config> {
-    let matches = App::new("catr")
-        .version("0.2.0")
-        .about("cat in Rust")
-        .arg(
-            Arg::with_name("files")
-                .value_name("FILE")
-                .help("Input file(s)")
-                .multiple(true)
-                .default_value("-")
-        )
-        .arg(
-            Arg::with_name("show_all")
-                .short("A")
-                .long("show-all")
-                .help("equivalent to -vET")
-                .takes_value(false)
-                .display_order(1)
-        )
-        .arg(
-            Arg::with_name("number_nonblank")
-                .short("b")
-                .long("number-nonblank")
-                .help("Number non-blank lines")
-                .takes_value(false)
-                .display_order(2)
-        )      
-        .arg(
-            Arg::with_name("vE")
-                .short("e")
-                .help("equivalent to -vE")
-                .takes_value(false)
-                .display_order(3)
-        )
-        .arg(
-            Arg::with_name("show_ends")
-                .short("E")
-                .long("show-ends")
-                .help("display $ at end of each line")
-                .takes_value(false)
-                .display_order(4)
-        )
-        .arg(
-            Arg::with_name("number")
-                .short("n")
-                .long("number")
-                .help("Number lines")
-                .takes_value(false)
-                .conflicts_with("number_nonblank")
-                .display_order(5)
-        )
-        .arg(
-            Arg::with_name("squeeze_blank")
-                .short("s")
-                .long("--squeeze-blank")
-                .help("suppress repeated empty output lines")
-                .takes_value(false)
-                .display_order(6)
-        )
-        .arg(
-            Arg::with_name("vT")
-                .short("t")
-                .help("equivalent to -vT")
-                .takes_value(false)
-                .display_order(7)
-        )
-        .arg(
-            Arg::with_name("show_tabs")
-                .short("T")
-                .long("show-tabs")
-                .help("display TAB characters as ^I")
-                .takes_value(false)
-                .display_order(8)
-        )
-        .arg(
-            Arg::with_name("ignored")
-                .short("u")
-                .help("(ignored)")
-                .takes_value(false)
-                .display_order(9)
-        )
-        .arg(
-            Arg::with_name("show_nonprinting")
-                .short("v")
-                .long("show-nonprinting")
-                .help("use ^ and M- notation, except for LFD and TAB")
-                .takes_value(false)
-                .display_order(10)
-        )
+    let matches = command!()
+        .args(&[
+            arg!(files: [FILE] "Input file(s)")
+                .num_args(0..)
+                .default_value("-"),
+            arg!(show_all: -A --"show-all" "equivalent to -vET"),
+            arg!(number_nonblank: -b --"number-nonblank" "Number non-blank lines"),
+            arg!(vE: -e "equivalent to -vE"),
+            arg!(show_ends: -E --"show-ends" "display $ at end of each line"),
+            arg!(number: -n --number "Number lines")
+                .conflicts_with("number_nonblank"),
+            arg!(squeeze_blank: -s --"squeeze-blank" "suppress repeated empty output lines"),
+            arg!(vT: -t "equivalent to -vT"),
+            arg!(show_tabs: -T --"show-tabs" "display TAB characters as ^I"),
+            arg!(ignored: -u "(ignored)"),
+            arg!(show_nonprinting: -v --"show-nonprinting" "use ^ and M- notation, except for LFD and TAB")
+        ]) 
         .get_matches();
     
+    let files = matches.get_many::<String>("files")
+        .unwrap()
+        .map(String::clone)
+        .collect();
+    
+    let (show_all, vt, ve) = (
+        matches.get_flag("show_all"),
+        matches.get_flag("vT"),
+        matches.get_flag("vE")
+    );
+
     Ok(Config {
-        files: matches.values_of_lossy("files").unwrap(),
-        number_lines: matches.is_present("number"),
-        number_nonblank_lines: matches.is_present("number_nonblank"),
+        files,
+        number_lines: matches.get_flag("number"),
+        number_nonblank_lines: matches.get_flag("number_nonblank"),
         show_tabs:
-            matches.is_present("show_tabs") ||
-            matches.is_present("show_all") ||
-            matches.is_present("vT"),
+            matches.get_flag("show_tabs") ||
+            show_all || vt,
         show_ends:
-            matches.is_present("show_ends") ||
-            matches.is_present("show_all") ||
-            matches.is_present("vE"),
+            matches.get_flag("show_ends") ||
+            show_all || ve,
         show_nonprinting:
-            matches.is_present("show_nonprinting") ||
-            matches.is_present("show_all") ||
-            matches.is_present("vE") ||
-            matches.is_present("vT"),
-        squeeze_blank: matches.is_present("squeeze_blank")
+            matches.get_flag("show_nonprinting") ||
+            show_all || ve || vt,
+        squeeze_blank: matches.get_flag("squeeze_blank")
     })
 }
 
