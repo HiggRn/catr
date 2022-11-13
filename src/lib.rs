@@ -18,8 +18,8 @@ pub struct Config {
 }
 
 pub fn run(config: Config) -> RunResult<()> {
-    for filename in config.files {
-        let file = match open(&filename) {
+    for filename in &config.files {
+        let file = match open(filename) {
             Ok(file) => file,            
             Err(err) => {
                 eprintln!("{filename}: {err}");
